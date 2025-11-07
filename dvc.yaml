@@ -1,0 +1,22 @@
+stages:
+  prepare_data:
+    cmd: python prepare_data.py --dataset-path data/iris.parquet --db-path 
+      data/iris.db --db-table iris_samples
+    deps:
+    - prepare_data.py
+    outs:
+    - data/iris.db:
+        cache: false
+    - data/iris.parquet:
+        cache: false
+  train_model:
+    cmd: python train.py --params-file params.yaml --data-path data/iris.parquet
+      --model-path artifacts/model.pkl
+    deps:
+    - data/iris.parquet
+    - train.py
+    params:
+    - train
+    outs:
+    - artifacts/model.pkl:
+        cache: false

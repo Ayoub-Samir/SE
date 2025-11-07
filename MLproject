@@ -1,0 +1,17 @@
+name: jenkins-mlflow-demo
+
+python_env: python_env.yaml
+
+entry_points:
+  main:
+    parameters:
+      test_size: {type: float, default: 0.2}
+      random_state: {type: int, default: 42}
+      max_iter: {type: int, default: 200}
+      experiment_name: {type: str, default: "jenkins-mlflow-demo"}
+    command: >
+      python train.py
+        --test-size {test_size}
+        --random-state {random_state}
+        --max-iter {max_iter}
+        --experiment-name {experiment_name}

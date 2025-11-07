@@ -1,0 +1,14 @@
+prepare:
+  dataset_path: data/iris.parquet
+  db_path: data/iris.db
+  db_table: iris_samples
+
+train:
+  dataset_path: data/iris.parquet
+  model_path: artifacts/model.pkl
+  test_size: 0.2
+  random_state: 42
+  max_iter: 200
+  experiment_name: jenkins-mlflow-demo
+  db_path: data/iris.db
+  db_table: iris_samples

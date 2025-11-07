@@ -1,0 +1,47 @@
+schema: '2.0'
+stages:
+  prepare_data:
+    cmd: python prepare_data.py --dataset-path data/iris.parquet --db-path 
+      data/iris.db --db-table iris_samples
+    deps:
+    - path: prepare_data.py
+      hash: md5
+      md5: 1232d3ae72d99733da612e9b7425882a
+      size: 1155
+    outs:
+    - path: data/iris.db
+      hash: md5
+      md5: 0dcff987486e0d0c0b95fee3641df4cb
+      size: 16384
+    - path: data/iris.parquet
+      hash: md5
+      md5: db355369ff6f614d6edf590818871ca6
+      size: 4701
+  train_model:
+    cmd: python train.py --params-file params.yaml --data-path data/iris.parquet
+      --model-path artifacts/model.pkl
+    deps:
+    - path: data/iris.parquet
+      hash: md5
+      md5: db355369ff6f614d6edf590818871ca6
+      size: 4701
+    - path: train.py
+      hash: md5
+      md5: 44fc18f91904cc9d6298b3fb64eff179
+      size: 6772
+    params:
+      params.yaml:
+        train:
+          dataset_path: data/iris.parquet
+          model_path: artifacts/model.pkl
+          test_size: 0.2
+          random_state: 42
+          max_iter: 200
+          experiment_name: jenkins-mlflow-demo
+          db_path: data/iris.db
+          db_table: iris_samples
+    outs:
+    - path: artifacts/model.pkl
+      hash: md5
+      md5: 9e148f848c5805d3e59d8bb3413823ac
+      size: 991
