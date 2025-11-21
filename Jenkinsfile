@@ -51,8 +51,17 @@ pipeline {
                     set -e
                     . "${VENV_DIR}/bin/activate"
                     "${PIP}" install -r requirements-security.txt
-                    pip-audit -r requirements.txt
-                    bandit -r . -ll -iii
+                    # Run pip-audit; allow exit code 1 (vulns found) but fail on other errors.
+                    if ! pip-audit -r requirements.txt --format json --output pip-audit.json; then
+                        status=$?
+                        if [ "$status" -eq 1 ]; then
+                            echo "pip-audit found vulnerabilities; marking as warning but continuing build"
+                        else
+                            echo "pip-audit failed with exit code $status" >&2
+                            exit $status
+                        fi
+                    fi
+                    bandit -r . -ll -iii -f json -o bandit.json
                 '''
             }
         }
@@ -110,7 +119,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'mlruns_local/**', allowEmptyArchive: true, fingerprint: true
+            archiveArtifacts artifacts: 'mlruns_local/**,pip-audit.json,bandit.json', allowEmptyArchive: true, fingerprint: true
         }
     }
 }

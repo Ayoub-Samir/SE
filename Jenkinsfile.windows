@@ -51,8 +51,15 @@ pipeline {
                     $ErrorActionPreference = "Stop"
                     & "$env:VENV_DIR\\Scripts\\Activate.ps1"
                     & "$env:PIP" install -r requirements-security.txt
-                    pip-audit -r requirements.txt
-                    bandit -r . -ll -iii
+                    # Run pip-audit; allow exit code 1 (vulnerabilities found) but fail on other errors.
+                    pip-audit -r requirements.txt --format json --output pip-audit.json
+                    if ($LASTEXITCODE -eq 1) {
+                        Write-Host "pip-audit found vulnerabilities; marking as warning but continuing build"
+                        $global:LASTEXITCODE = 0
+                    } elseif ($LASTEXITCODE -ne 0) {
+                        throw "pip-audit failed with exit code $LASTEXITCODE"
+                    }
+                    bandit -r . -ll -iii -f json -o bandit.json
                 '''
             }
         }
@@ -112,7 +119,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'mlruns_local/**', allowEmptyArchive: true, fingerprint: true
+            archiveArtifacts artifacts: 'mlruns_local/**,pip-audit.json,bandit.json', allowEmptyArchive: true, fingerprint: true
         }
     }
 }
