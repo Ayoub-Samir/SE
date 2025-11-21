@@ -61,7 +61,7 @@ pipeline {
                             exit $status
                         fi
                     fi
-                    bandit -r . -ll -iii -f json -o bandit.json
+                    bandit -r . -x .venv -ll -iii -f json -o bandit.json
                 '''
             }
         }

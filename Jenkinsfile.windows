@@ -59,7 +59,7 @@ pipeline {
                     } elseif ($LASTEXITCODE -ne 0) {
                         throw "pip-audit failed with exit code $LASTEXITCODE"
                     }
-                    bandit -r . -ll -iii -f json -o bandit.json
+                    bandit -r . -x .venv -ll -iii -f json -o bandit.json
                 '''
             }
         }
