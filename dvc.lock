@@ -27,8 +27,8 @@ stages:
       size: 4701
     - path: train.py
       hash: md5
-      md5: 44fc18f91904cc9d6298b3fb64eff179
-      size: 6772
+      md5: 82ab10ca65aef614eebb77f58546d3bf
+      size: 7601
     params:
       params.yaml:
         train:
@@ -43,5 +43,5 @@ stages:
     outs:
     - path: artifacts/model.pkl
       hash: md5
-      md5: 9e148f848c5805d3e59d8bb3413823ac
+      md5: b50448f8c1445f1259340a37c3d7e251
       size: 991
