@@ -11,6 +11,7 @@ pipeline {
         string(name: 'MLFLOW_EXPERIMENT_NAME', defaultValue: 'jenkins-mlflow-demo', description: 'Target MLflow experiment.')
         string(name: 'MAX_ITER', defaultValue: '200', description: 'max_iter parameter for LogisticRegression.')
         booleanParam(name: 'USE_MLFLOW_PROJECT', defaultValue: false, description: 'Enable to execute via `mlflow run .` instead of python train.py')
+        booleanParam(name: 'RUN_SECURITY_SCANS', defaultValue: true, description: 'Run pip-audit and bandit before training.')
     }
 
     environment {
@@ -37,6 +38,21 @@ pipeline {
                     $ErrorActionPreference = "Stop"
                     & "$env:VENV_DIR\\Scripts\\Activate.ps1"
                     & "$env:PIP" install -r requirements.txt
+                '''
+            }
+        }
+
+        stage('Security Scan') {
+            when {
+                expression { params.RUN_SECURITY_SCANS }
+            }
+            steps {
+                powershell '''
+                    $ErrorActionPreference = "Stop"
+                    & "$env:VENV_DIR\\Scripts\\Activate.ps1"
+                    & "$env:PIP" install -r requirements-security.txt
+                    pip-audit -r requirements.txt
+                    bandit -r . -ll -iii
                 '''
             }
         }

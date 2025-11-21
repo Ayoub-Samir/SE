@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
+import hashlib
 import joblib
 import mlflow
 import mlflow.sklearn
@@ -88,6 +89,19 @@ def ensure_dataset(data_path: Path, force_prepare: bool) -> pd.DataFrame:
     return df
 
 
+def file_sha256(path: Path) -> str:
+    """Compute a SHA256 hash for integrity tracking."""
+    BUF_SIZE = 1024 * 1024
+    sha = hashlib.sha256()
+    with path.open("rb") as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            sha.update(data)
+    return sha.hexdigest()
+
+
 def split_features_targets(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
     features = df.drop(columns=["target"])
     target = df["target"]
@@ -158,6 +172,18 @@ def main() -> None:
 
         model_path = persist_model(model, Path(args.model_path))
         mlflow.log_artifact(str(model_path), artifact_path="serialized_model")
+
+        data_hash = file_sha256(data_path)
+        model_hash = file_sha256(model_path)
+        integrity_manifest = {
+            "data_path": str(data_path),
+            "data_sha256": data_hash,
+            "model_path": str(model_path),
+            "model_sha256": model_hash,
+        }
+        mlflow.set_tag("data_sha256", data_hash)
+        mlflow.set_tag("model_sha256", model_hash)
+        mlflow.log_dict(integrity_manifest, artifact_file="security_manifest.json")
 
         output_dir = ensure_output_dir(run_id)
         report_path = output_dir / "classification_report.json"

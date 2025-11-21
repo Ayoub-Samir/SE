@@ -24,6 +24,7 @@ This project shows how to automate an MLflow experiment with Jenkins, persist th
    - `MLFLOW_EXPERIMENT_NAME`: overrides the experiment in `params.yaml`.
    - `MAX_ITER`: forwarded into `params.yaml` before `dvc repro`.
    - `USE_MLFLOW_PROJECT`: when `true`, skip DVC and call `mlflow run .`.
+   - `RUN_SECURITY_SCANS`: when `true`, installs `requirements-security.txt` and runs `pip-audit` (dependency CVEs) and `bandit` (Python static analysis) before training.
 3. Linux agents use `Jenkinsfile` (shell), Windows agents use `Jenkinsfile.windows` (PowerShell).
 4. Jenkins archives `mlruns_local/**` so classification reports are downloadable even without MLflow UI access.
 
@@ -64,3 +65,4 @@ Open `http://127.0.0.1:5000` to inspect the latest runs.
 1. Point `params.yaml` to a different data source or table and re-run `dvc repro`.
 2. Configure `dvc remote add` to S3/Azure/GDrive when data/models grow larger.
 3. Add a Jenkins post step that prints a link to your hosted MLflow UI using the run ID from the logs.
+4. For stronger MLSecOps/OWASP coverage, add secrets scanning (e.g., gitleaks/detect-secrets) and artifact signing; hashes are already logged to MLflow via `security_manifest.json` for integrity checks.
