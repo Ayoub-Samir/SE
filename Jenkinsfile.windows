@@ -12,6 +12,7 @@ pipeline {
         string(name: 'MAX_ITER', defaultValue: '200', description: 'max_iter parameter for LogisticRegression.')
         booleanParam(name: 'USE_MLFLOW_PROJECT', defaultValue: false, description: 'Enable to execute via `mlflow run .` instead of python train.py')
         booleanParam(name: 'RUN_SECURITY_SCANS', defaultValue: true, description: 'Run pip-audit and bandit before training.')
+        booleanParam(name: 'RUN_MS_SECURITY', defaultValue: false, description: 'Run Microsoft Security DevOps (CredScan/DevSkim/Bandit) if msdo is available.')
     }
 
     environment {
@@ -60,6 +61,27 @@ pipeline {
                         throw "pip-audit failed with exit code $LASTEXITCODE"
                     }
                     bandit -r . -x .venv -ll -iii -f json -o bandit.json
+                '''
+            }
+        }
+
+        stage('MS Security DevOps (optional)') {
+            when {
+                expression { params.RUN_MS_SECURITY }
+            }
+            steps {
+                powershell '''
+                    $ErrorActionPreference = "Stop"
+                    if (-not (Get-Command msdo -ErrorAction SilentlyContinue)) {
+                        Write-Warning "msdo not found on PATH; skipping Microsoft Security DevOps tools run."
+                        exit 0
+                    }
+                    & "$env:VENV_DIR\\Scripts\\Activate.ps1"
+                    msdo run --tools "credscan,devskim,bandit" --output-format sarif --output-path msdo.sarif
+                    if ($LASTEXITCODE -ne 0) {
+                        Write-Warning "msdo returned exit code $LASTEXITCODE; marking build as failed for visibility."
+                        exit $LASTEXITCODE
+                    }
                 '''
             }
         }
@@ -119,7 +141,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'mlruns_local/**,pip-audit.json,bandit.json', allowEmptyArchive: true, fingerprint: true
+            archiveArtifacts artifacts: 'mlruns_local/**,pip-audit.json,bandit.json,msdo.sarif', allowEmptyArchive: true, fingerprint: true
         }
     }
 }

@@ -25,6 +25,7 @@ This project shows how to automate an MLflow experiment with Jenkins, persist th
    - `MAX_ITER`: forwarded into `params.yaml` before `dvc repro`.
    - `USE_MLFLOW_PROJECT`: when `true`, skip DVC and call `mlflow run .`.
    - `RUN_SECURITY_SCANS`: when `true`, installs `requirements-security.txt` and runs `pip-audit` (dependency CVEs) and `bandit` (Python static analysis) before training.
+   - `RUN_MS_SECURITY` (Windows ajanı): `msdo` (Microsoft Security DevOps) yüklüyse CredScan/DevSkim/Bandit taramaları çalıştırır ve `msdo.sarif` üretir.
 3. Linux agents use `Jenkinsfile` (shell), Windows agents use `Jenkinsfile.windows` (PowerShell).
 4. Jenkins archives `mlruns_local/**` so classification reports are downloadable even without MLflow UI access.
 
@@ -66,3 +67,4 @@ Open `http://127.0.0.1:5000` to inspect the latest runs.
 2. Configure `dvc remote add` to S3/Azure/GDrive when data/models grow larger.
 3. Add a Jenkins post step that prints a link to your hosted MLflow UI using the run ID from the logs.
 4. For stronger MLSecOps/OWASP coverage, add secrets scanning (e.g., gitleaks/detect-secrets) and artifact signing; hashes are already logged to MLflow via `security_manifest.json` for integrity checks.
+5. Microsoft ekosistemi isteyenler için: Windows ajanına `msdo` kurarak `RUN_MS_SECURITY` parametresiyle CredScan/DevSkim/Bandit SARIF çıktısı alabilirsiniz.
