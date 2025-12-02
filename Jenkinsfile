@@ -12,6 +12,8 @@ pipeline {
         string(name: 'MAX_ITER', defaultValue: '200', description: 'max_iter parameter for LogisticRegression.')
         booleanParam(name: 'USE_MLFLOW_PROJECT', defaultValue: false, description: 'Enable to execute via `mlflow run .` instead of python train.py')
         booleanParam(name: 'RUN_SECURITY_SCANS', defaultValue: true, description: 'Run pip-audit and bandit before training.')
+        booleanParam(name: 'RUN_GARAK', defaultValue: false, description: 'Run garak red-team probes (requires model/args).')
+        string(name: 'GARAK_COMMAND', defaultValue: '', description: 'Full garak CLI arguments, e.g. "--model openai:gpt-4o-mini --n-probes 10 --report garak_report.json". Leave empty to skip.')
     }
 
     environment {
@@ -62,6 +64,24 @@ pipeline {
                         fi
                     fi
                     bandit -r . -x .venv -ll -iii -f json -o bandit.json
+                '''
+            }
+        }
+
+        stage('Garak Red Team (optional)') {
+            when {
+                expression { params.RUN_GARAK }
+            }
+            steps {
+                sh '''
+                    set -e
+                    . "${VENV_DIR}/bin/activate"
+                    if [ -z "${GARAK_COMMAND}" ]; then
+                        echo "GARAK_COMMAND is empty; skipping garak run."
+                        exit 0
+                    fi
+                    "${PIP}" install garak
+                    garak ${GARAK_COMMAND}
                 '''
             }
         }
@@ -119,7 +139,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'mlruns_local/**,pip-audit.json,bandit.json', allowEmptyArchive: true, fingerprint: true
+            archiveArtifacts artifacts: 'mlruns_local/**,pip-audit.json,bandit.json,garak_report.*', allowEmptyArchive: true, fingerprint: true
         }
     }
 }
