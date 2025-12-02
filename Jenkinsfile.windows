@@ -101,7 +101,9 @@ pipeline {
                         exit 0
                     }
                     & "$env:PIP" install garak
-                    garak $env:GARAK_COMMAND
+                    $cmdArgs = $env:GARAK_COMMAND -split '\\s+'
+                    Write-Host "Running garak with args: $cmdArgs"
+                    garak @cmdArgs
                 '''
             }
         }
