@@ -109,6 +109,7 @@ pipeline {
                         "EXPERIMENT_NAME=${experimentName}",
                         "MAX_ITER=${maxIter}",
                         "USE_MLFLOW_PROJECT=${params.USE_MLFLOW_PROJECT}",
+                        "MLFLOW_ENV_MANAGER=local",
                     ]) {
                         sh '''
                             set -e
