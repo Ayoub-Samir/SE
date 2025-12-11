@@ -125,16 +125,12 @@ def run_giskard(df: pd.DataFrame, model, output: Path) -> Path:
     output.parent.mkdir(parents=True, exist_ok=True)
     report = scan(wrapped_model, dataset)
 
-    # Different versions expose different writers; enforce UTF-8 to avoid Windows codec issues.
+    # Always write JSON with UTF-8 to avoid Windows codec/emoji issues.
     try:
-        report.save(str(output))
-    except Exception:
-        try:
-            report_path = Path(output)
-            report_json = report.to_json()
-            report_path.write_text(report_json, encoding="utf-8")
-        except Exception as exc:  # pragma: no cover - handled at runtime
-            raise RuntimeError(f"Failed to serialize Giskard report: {exc}") from exc
+        report_json = report.to_json()
+        Path(output).write_text(report_json, encoding="utf-8", errors="replace")
+    except Exception as exc:  # pragma: no cover - handled at runtime
+        raise RuntimeError(f"Failed to serialize Giskard report: {exc}") from exc
 
     return output
 
