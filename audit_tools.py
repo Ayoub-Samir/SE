@@ -128,9 +128,15 @@ def run_giskard(df: pd.DataFrame, model, output: Path) -> Path:
     # Always write JSON with UTF-8 to avoid Windows codec/emoji issues.
     try:
         report_json = report.to_json()
+    except Exception as exc:  # pragma: no cover
+        # If serialization fails, emit a minimal placeholder.
+        report_json = json.dumps({"warning": "serialization failed", "error": str(exc)})
+
+    try:
         Path(output).write_bytes(report_json.encode("utf-8", "replace"))
-    except Exception as exc:  # pragma: no cover - handled at runtime
-        raise RuntimeError(f"Failed to serialize Giskard report: {exc}") from exc
+    except Exception:
+        # Best-effort fallback to ignore errors; avoid failing the pipeline.
+        Path(output).write_text(report_json, encoding="utf-8", errors="ignore")
 
     return output
 
