@@ -45,13 +45,18 @@ def run_fairlearn(df: pd.DataFrame, model, output: Path) -> Path:
     except ImportError as exc:  # pragma: no cover - handled at runtime
         raise RuntimeError("fairlearn is not installed") from exc
 
-    features = df.drop(columns=["target"])
-    y_true = df["target"]
-    y_pred = model.predict(features)
+    feature_cols = [c for c in df.columns if c != "target"]
+    if not feature_cols:
+        raise RuntimeError("Dataset is missing feature columns.")
 
-    # Simple synthetic sensitive attribute: high vs low sepal length.
-    sensitive = (df["sepal_length"] > df["sepal_length"].median()).map(
-        {True: "high_sepal", False: "low_sepal"}
+    y_true = df["target"]
+    X = df[feature_cols].to_numpy()
+    y_pred = model.predict(X)
+
+    # Synthetic sensitive attribute: use the first feature column to avoid name mismatches (spaces/underscores).
+    sensitive_col = feature_cols[0]
+    sensitive = (df[sensitive_col] > df[sensitive_col].median()).map(
+        {True: f"high_{sensitive_col}", False: f"low_{sensitive_col}"}
     )
 
     mf = MetricFrame(
@@ -96,6 +101,8 @@ def run_giskard(df: pd.DataFrame, model, output: Path) -> Path:
         raise RuntimeError("giskard is not installed") from exc
 
     feature_cols = [c for c in df.columns if c != "target"]
+    if not feature_cols:
+        raise RuntimeError("Dataset is missing feature columns.")
     dataset = Dataset(
         df=df[feature_cols + ["target"]],
         target="target",
