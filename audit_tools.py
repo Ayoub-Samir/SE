@@ -113,7 +113,6 @@ def run_giskard(df: pd.DataFrame, model, output: Path) -> Path:
     dataset = Dataset(
         df=df[feature_cols + ["target"]],
         target="target",
-        feature_types=None,
     )
     wrapped_model = Model(
         model=model,
