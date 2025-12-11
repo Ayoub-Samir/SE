@@ -15,6 +15,10 @@ pipeline {
         booleanParam(name: 'RUN_MS_SECURITY', defaultValue: false, description: 'Run Microsoft Security DevOps (CredScan/DevSkim/Bandit) if msdo is available.')
         booleanParam(name: 'RUN_GARAK', defaultValue: false, description: 'Run garak red-team probes (requires model/args).')
         string(name: 'GARAK_COMMAND', defaultValue: '', description: 'Full garak CLI arguments, e.g. \"--model openai:gpt-4o-mini --n-probes 10 --report garak_report.json\". Leave empty to skip.')
+        booleanParam(name: 'RUN_FAIRLEARN', defaultValue: false, description: 'Run Fairlearn bias snapshot after training.')
+        booleanParam(name: 'RUN_GISKARD', defaultValue: false, description: 'Run Giskard scan after training.')
+        booleanParam(name: 'RUN_CREDO_AI', defaultValue: false, description: 'Capture Credo AI metadata after training.')
+        booleanParam(name: 'RUN_CYCLONEDX', defaultValue: false, description: 'Generate CycloneDX SBOM for dependencies.')
     }
 
     environment {
@@ -160,11 +164,74 @@ pipeline {
                 }
             }
         }
+
+        stage('Fairlearn Bias Check (optional)') {
+            when {
+                expression { params.RUN_FAIRLEARN }
+            }
+            steps {
+                powershell '''
+                    $ErrorActionPreference = "Stop"
+                    & "$env:VENV_DIR\\Scripts\\Activate.ps1"
+                    & "$env:PIP" install fairlearn
+                    python audit_tools.py --run-fairlearn
+                '''
+            }
+        }
+
+        stage('Giskard QA (optional)') {
+            when {
+                expression { params.RUN_GISKARD }
+            }
+            steps {
+                powershell '''
+                    $ErrorActionPreference = "Stop"
+                    & "$env:VENV_DIR\\Scripts\\Activate.ps1"
+                    & "$env:PIP" install giskard
+                    python audit_tools.py --run-giskard
+                '''
+            }
+        }
+
+        stage('Credo AI Metadata (optional)') {
+            when {
+                expression { params.RUN_CREDO_AI }
+            }
+            steps {
+                powershell '''
+                    $ErrorActionPreference = "Stop"
+                    & "$env:VENV_DIR\\Scripts\\Activate.ps1"
+                    & "$env:PIP" install credoai
+                    python audit_tools.py --run-credo
+                '''
+            }
+        }
+
+        stage('CycloneDX SBOM (optional)') {
+            when {
+                expression { params.RUN_CYCLONEDX }
+            }
+            steps {
+                powershell '''
+                    $ErrorActionPreference = "Stop"
+                    & "$env:VENV_DIR\\Scripts\\Activate.ps1"
+                    & "$env:PIP" install cyclonedx-bom
+                    if (-not (Test-Path artifacts)) { New-Item -ItemType Directory -Path artifacts | Out-Null }
+                    if (Get-Command cyclonedx-py -ErrorAction SilentlyContinue) {
+                        cyclonedx-py -j -r requirements.txt -o artifacts/cyclonedx-sbom.json
+                    } elseif (Get-Command cyclonedx-bom -ErrorAction SilentlyContinue) {
+                        cyclonedx-bom -j -r requirements.txt -o artifacts/cyclonedx-sbom.json
+                    } else {
+                        throw "CycloneDX CLI not found after install."
+                    }
+                '''
+            }
+        }
     }
 
     post {
         always {
-            archiveArtifacts artifacts: 'mlruns_local/**,pip-audit.json,bandit.json,msdo.sarif,garak_report.*', allowEmptyArchive: true, fingerprint: true
+            archiveArtifacts artifacts: 'mlruns_local/**,pip-audit.json,bandit.json,msdo.sarif,garak_report.*,artifacts/fairlearn_report.json,artifacts/giskard_report.*,artifacts/credoai_report.json,artifacts/cyclonedx-sbom.json', allowEmptyArchive: true, fingerprint: true
         }
     }
 }

@@ -25,10 +25,14 @@ This project shows how to automate an MLflow experiment with Jenkins, persist th
    - `MAX_ITER`: forwarded into `params.yaml` before `dvc repro`.
    - `USE_MLFLOW_PROJECT`: when `true`, skip DVC and call `mlflow run .`.
    - `RUN_SECURITY_SCANS`: when `true`, installs `requirements-security.txt` and runs `pip-audit` (dependency CVEs) and `bandit` (Python static analysis) before training.
-   - `RUN_MS_SECURITY` (Windows ajanı): `msdo` (Microsoft Security DevOps) yüklüyse CredScan/DevSkim/Bandit taramaları çalıştırır ve `msdo.sarif` üretir.
-   - `RUN_GARAK` + `GARAK_COMMAND`: Garak red-team testlerini koşmak için; `GARAK_COMMAND` içine tam garak CLI argümanlarını (model, n-probes, rapor yolu vb.) yazın.
+   - `RUN_MS_SECURITY` (Windows agents): if `msdo` (Microsoft Security DevOps) is installed, run CredScan/DevSkim/Bandit and emit `msdo.sarif`.
+   - `RUN_GARAK` + `GARAK_COMMAND`: run Garak LLM red-team tests; put the full Garak CLI args (model, n-probes, report path, etc.) into `GARAK_COMMAND`.
+   - `RUN_FAIRLEARN`: run a Fairlearn bias snapshot on the trained model and dataset.
+   - `RUN_GISKARD`: run a Giskard scan of the trained model and dataset.
+   - `RUN_CREDO_AI`: capture Credo AI metadata (version + basic dataset info).
+   - `RUN_CYCLONEDX`: generate a CycloneDX SBOM from `requirements.txt`.
 3. Linux agents use `Jenkinsfile` (shell), Windows agents use `Jenkinsfile.windows` (PowerShell).
-4. Jenkins archives `mlruns_local/**` so classification reports are downloadable even without MLflow UI access.
+4. Jenkins archives `mlruns_local/**`, security outputs, Garak reports, fairness/scanner outputs, and the SBOM so they can be downloaded even without MLflow UI access.
 
 ### DVC Workflow
 Data (`data/iris.parquet`, `data/iris.db`) and the model (`artifacts/model.pkl`) are tracked as DVC outputs with `cache: false`, so the actual files stay in Git while DVC captures lineage in `dvc.lock`.
@@ -68,5 +72,6 @@ Open `http://127.0.0.1:5000` to inspect the latest runs.
 2. Configure `dvc remote add` to S3/Azure/GDrive when data/models grow larger.
 3. Add a Jenkins post step that prints a link to your hosted MLflow UI using the run ID from the logs.
 4. For stronger MLSecOps/OWASP coverage, add secrets scanning (e.g., gitleaks/detect-secrets) and artifact signing; hashes are already logged to MLflow via `security_manifest.json` for integrity checks.
-5. Microsoft ekosistemi isteyenler için: Windows ajanına `msdo` kurarak `RUN_MS_SECURITY` parametresiyle CredScan/DevSkim/Bandit SARIF çıktısı alabilirsiniz.
-6. LLM red-teaming için: `RUN_GARAK` + `GARAK_COMMAND` ile Garak çalıştırın; örnek: `--model openai:gpt-4o-mini --n-probes 10 --report garak_report.json`. API erişimi veya model erişimi size ait olmalı.
+5. To stay within the Microsoft ecosystem: install `msdo` on Windows agents and enable `RUN_MS_SECURITY` to get CredScan/DevSkim/Bandit SARIF output.
+6. LLM red-teaming: enable `RUN_GARAK` and pass something like `--model openai:gpt-4o-mini --n-probes 10 --report garak_report.json` into `GARAK_COMMAND` (supply your own model/API credentials).
+7. Fairness & governance: toggle `RUN_FAIRLEARN`, `RUN_GISKARD`, `RUN_CREDO_AI`, and/or `RUN_CYCLONEDX` to emit bias, QA/governance metadata, and SBOM artifacts under `artifacts/`.

@@ -14,6 +14,10 @@ pipeline {
         booleanParam(name: 'RUN_SECURITY_SCANS', defaultValue: true, description: 'Run pip-audit and bandit before training.')
         booleanParam(name: 'RUN_GARAK', defaultValue: false, description: 'Run garak red-team probes (requires model/args).')
         string(name: 'GARAK_COMMAND', defaultValue: '', description: 'Full garak CLI arguments, e.g. "--model openai:gpt-4o-mini --n-probes 10 --report garak_report.json". Leave empty to skip.')
+        booleanParam(name: 'RUN_FAIRLEARN', defaultValue: false, description: 'Run Fairlearn bias snapshot after training.')
+        booleanParam(name: 'RUN_GISKARD', defaultValue: false, description: 'Run Giskard scan after training.')
+        booleanParam(name: 'RUN_CREDO_AI', defaultValue: false, description: 'Capture Credo AI metadata after training.')
+        booleanParam(name: 'RUN_CYCLONEDX', defaultValue: false, description: 'Generate CycloneDX SBOM for dependencies.')
     }
 
     environment {
@@ -136,11 +140,75 @@ pipeline {
                 }
             }
         }
+
+        stage('Fairlearn Bias Check (optional)') {
+            when {
+                expression { params.RUN_FAIRLEARN }
+            }
+            steps {
+                sh '''
+                    set -e
+                    . "${VENV_DIR}/bin/activate"
+                    "${PIP}" install fairlearn
+                    python audit_tools.py --run-fairlearn
+                '''
+            }
+        }
+
+        stage('Giskard QA (optional)') {
+            when {
+                expression { params.RUN_GISKARD }
+            }
+            steps {
+                sh '''
+                    set -e
+                    . "${VENV_DIR}/bin/activate"
+                    "${PIP}" install giskard
+                    python audit_tools.py --run-giskard
+                '''
+            }
+        }
+
+        stage('Credo AI Metadata (optional)') {
+            when {
+                expression { params.RUN_CREDO_AI }
+            }
+            steps {
+                sh '''
+                    set -e
+                    . "${VENV_DIR}/bin/activate"
+                    "${PIP}" install credoai
+                    python audit_tools.py --run-credo
+                '''
+            }
+        }
+
+        stage('CycloneDX SBOM (optional)') {
+            when {
+                expression { params.RUN_CYCLONEDX }
+            }
+            steps {
+                sh '''
+                    set -e
+                    . "${VENV_DIR}/bin/activate"
+                    "${PIP}" install cyclonedx-bom
+                    mkdir -p artifacts
+                    if command -v cyclonedx-py >/dev/null 2>&1; then
+                        cyclonedx-py -j -r requirements.txt -o artifacts/cyclonedx-sbom.json
+                    elif command -v cyclonedx-bom >/dev/null 2>&1; then
+                        cyclonedx-bom -j -r requirements.txt -o artifacts/cyclonedx-sbom.json
+                    else
+                        echo "CycloneDX CLI not found after install" >&2
+                        exit 1
+                    fi
+                '''
+            }
+        }
     }
 
     post {
         always {
-            archiveArtifacts artifacts: 'mlruns_local/**,pip-audit.json,bandit.json,garak_report.*', allowEmptyArchive: true, fingerprint: true
+            archiveArtifacts artifacts: 'mlruns_local/**,pip-audit.json,bandit.json,garak_report.*,artifacts/fairlearn_report.json,artifacts/giskard_report.*,artifacts/credoai_report.json,artifacts/cyclonedx-sbom.json', allowEmptyArchive: true, fingerprint: true
         }
     }
 }
