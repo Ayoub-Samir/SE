@@ -86,12 +86,12 @@ def run_fairlearn(df: pd.DataFrame, model, output: Path) -> Path:
         "by_group": by_group,
         "demographic_parity_difference": float(
             demographic_parity_difference(
-                y_true=y_true_bin, y_pred=y_pred_bin, sensitive_features=sensitive, pos_label=1
+                y_true=y_true_bin, y_pred=y_pred_bin, sensitive_features=sensitive
             )
         ),
         "equalized_odds_difference": float(
             equalized_odds_difference(
-                y_true=y_true_bin, y_pred=y_pred_bin, sensitive_features=sensitive, pos_label=1
+                y_true=y_true_bin, y_pred=y_pred_bin, sensitive_features=sensitive
             )
         ),
     }
