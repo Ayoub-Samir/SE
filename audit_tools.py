@@ -53,6 +53,13 @@ def run_fairlearn(df: pd.DataFrame, model, output: Path) -> Path:
     X = df[feature_cols].to_numpy()
     y_pred = model.predict(X)
 
+    # Fairlearn binary metrics require a positive label. For multiclass Iris, binarize:
+    # treat the first observed class as positive and the rest as negative. This keeps
+    # the audit stable regardless of class ordering.
+    pos_label = pd.unique(y_true)[0]
+    y_true_bin = (y_true == pos_label).astype(int)
+    y_pred_bin = (pd.Series(y_pred) == pos_label).astype(int)
+
     # Synthetic sensitive attribute: use the first feature column to avoid name mismatches (spaces/underscores).
     sensitive_col = feature_cols[0]
     sensitive = (df[sensitive_col] > df[sensitive_col].median()).map(
@@ -61,8 +68,8 @@ def run_fairlearn(df: pd.DataFrame, model, output: Path) -> Path:
 
     mf = MetricFrame(
         metrics={"accuracy": accuracy_score, "selection_rate": selection_rate},
-        y_true=y_true,
-        y_pred=y_pred,
+        y_true=y_true_bin,
+        y_pred=y_pred_bin,
         sensitive_features=sensitive,
     )
 
