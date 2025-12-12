@@ -225,7 +225,7 @@ pipeline {
                     & "$env:PIP" install cyclonedx-bom
                     if (-not (Test-Path artifacts)) { New-Item -ItemType Directory -Path artifacts | Out-Null }
                     if (Get-Command cyclonedx-py -ErrorAction SilentlyContinue) {
-                        cyclonedx-py -j -r requirements.txt -o artifacts/cyclonedx-sbom.json
+                        cyclonedx-py requirements -j -r requirements.txt -o artifacts/cyclonedx-sbom.json
                     } elseif (Get-Command cyclonedx-bom -ErrorAction SilentlyContinue) {
                         cyclonedx-bom -j -r requirements.txt -o artifacts/cyclonedx-sbom.json
                     } else {
