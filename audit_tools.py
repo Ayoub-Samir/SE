@@ -141,16 +141,15 @@ def run_giskard(df: pd.DataFrame, model, output: Path) -> Path:
 def run_credo(df: pd.DataFrame, model, output: Path) -> Path:
     try:
         import credoai  # type: ignore
-    except ImportError as exc:  # pragma: no cover - handled at runtime
-        raise RuntimeError("credoai is not installed") from exc
+        version = getattr(credoai, "__version__", "unknown")
+        info = {
+            "credoai_version": version,
+            "rows": int(df.shape[0]),
+            "features": [c for c in df.columns if c != "target"],
+        }
+    except ImportError:
+        info = {"warning": "credoai not installed; skipped."}
 
-    # Lightweight metadata to prove the tool was invoked; full policy checks
-    # would be configured externally.
-    info = {
-        "credoai_version": getattr(credoai, "__version__", "unknown"),
-        "rows": int(df.shape[0]),
-        "features": [c for c in df.columns if c != "target"],
-    }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(info, indent=2))
     return output

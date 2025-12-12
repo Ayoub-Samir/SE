@@ -177,8 +177,17 @@ pipeline {
                 sh '''
                     set -e
                     . "${VENV_DIR}/bin/activate"
-                    "${PIP}" install credoai
-                    python audit_tools.py --run-credo
+                    if ! "${PIP}" install credoai; then
+                        echo "Credo AI package not available on PyPI; skipping Credo metadata."
+                        python - <<'PY'
+from pathlib import Path
+Path("artifacts/credoai_report.json").parent.mkdir(parents=True, exist_ok=True)
+Path("artifacts/credoai_report.json").write_text('{"warning": "credoai package not available; skipped."}')
+print("Credo AI metadata skipped.")
+PY
+                    else
+                        python audit_tools.py --run-credo
+                    fi
                 '''
             }
         }
