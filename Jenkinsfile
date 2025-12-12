@@ -203,7 +203,7 @@ PY
                     "${PIP}" install cyclonedx-bom
                     mkdir -p artifacts
                     if command -v cyclonedx-py >/dev/null 2>&1; then
-                        cyclonedx-py requirements -j -r requirements.txt -o artifacts/cyclonedx-sbom.json
+                        cyclonedx-py requirements --requirements requirements.txt --output-file artifacts/cyclonedx-sbom.json --output-format json
                     elif command -v cyclonedx-bom >/dev/null 2>&1; then
                         cyclonedx-bom -j -r requirements.txt -o artifacts/cyclonedx-sbom.json
                     else
